@@ -37,6 +37,16 @@ class AWLocationManager: NSObject, CLLocationManagerDelegate, RCTBridgeModule {
     manager.requestAlwaysAuthorization()
   }
   
+  @objc func stopMonitoringForRegion(region:Dictionary<String, NSString>, callback:RCTResponseSenderBlock) {
+    let clRegion = CLCircularRegion(
+      center:CLLocationCoordinate2D(
+        latitude: region["latitude"]!.doubleValue,
+        longitude: region["longitude"]!.doubleValue),
+      radius: region["radius"]!.doubleValue, identifier: region["identifier"] as! String);
+    manager.stopMonitoringForRegion(clRegion);
+    callback([NSNull()]);
+  }
+  
   @objc func startMonitoringForRegion(region:Dictionary<String, NSString>, callback:RCTResponseSenderBlock) {
     NSLog("Monitoring region %@", region);
     manager.startMonitoringForRegion(CLCircularRegion(

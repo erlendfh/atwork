@@ -4,6 +4,7 @@
 */
 'use strict';
 console.log("***** Booting *****")
+var dateFormat = require('dateformat');
 var RCTPushNotificationManager = require('NativeModules').PushNotificationManager;
 var AWUtils = require('NativeModules').AWUtils;
 var React = require('react-native');
@@ -18,6 +19,7 @@ var {
 var {
     AppRegistry,
     Image,
+    ListView,
     Navigator,
     NativeAppEventEmitter,
     PushNotificationIOS,
@@ -44,20 +46,134 @@ NativeAppEventEmitter.addListener('ChangedLocationAuthorizationStatus', (newStat
 });
 
 NativeAppEventEmitter.addListener('ReceivedActionForLocalNotification', (action) => {
-    AWUtils.presentLocalNotification({
-        alertBody: "ReceivedActionForLocalNotification"
-    });
+    console.log("action", action);
+    if (action.identifier == "cancel_job") {
+        cancelJob(action.notification.userInfo.projectId).then(() => {
+            AWUtils.presentLocalNotification({
+                alertBody: "Cancelled project"
+            });
+        });
+    }
 });
+
+function startJob(projectId) {
+    projectId = Number(projectId);
+
+    return new Promise((resolve, reject) => {
+        DB.timePeriod((timePeriods) => {
+            console.log("Starting project", projectId);
+            var activeTimePeriods = timePeriods.where({
+                projectId: projectId,
+                endTime: null
+            }).find();
+
+            var timePeriod;
+            if (activeTimePeriods.length) {
+                timePeriod = activeTimePeriods[0];
+            } else {
+                timePeriod = {
+                    startTime: new Date().getTime(),
+                    projectId: projectId
+                };
+                timePeriods.add(timePeriod);
+            }
+            console.log("Committing...");
+            timePeriods.commit().then(() => {
+                console.log("Committed")
+                setSetting({activeProject: projectId, activeTimePeriod: timePeriod._id}).then(resolve.bind(null, timePeriod), reject);
+                console.log("emitting changed_timePeriod");
+                DB.events.emit("changed_timePeriod", timePeriod);
+            }, reject);
+        }, reject);
+    });
+}
+
+function stopJob(projectId) {
+    projectId = Number(projectId);
+    return new Promise((resolve, reject) => {
+        console.log("Stopping project", projectId);
+        DB.timePeriod((timePeriods) => {
+            console.log("Got time periods...");
+            var endTime = new Date().getTime();
+            timePeriods.where({
+                projectId: projectId,
+                endTime: null
+            }).update({
+                endTime: endTime
+            });
+
+            var updatedTimePeriods = timePeriods.where({
+                projectId: projectId,
+                endTime: endTime
+            }).find();
+
+            var activeTimePeriod = updatedTimePeriods.length && updatedTimePeriods[0];
+            if (activeTimePeriod && activeTimePeriod.endTime - activeTimePeriod.startTime < 300000) {
+                console.log("time span too short, removing time periods");
+                timePeriods.where({
+                    endTime: endTime
+                }).remove();
+                activeTimePeriod = null;
+            } else {
+                console.log("time span long enough", activeTimePeriod, activeTimePeriod.endTime, activeTimePeriod.startTime);
+            }
+
+            timePeriods.commit().then(() => {
+                setSetting({activeProject: null, activeTimePeriod: null}).
+                    then(resolve.bind(null, activeTimePeriod), reject);
+                console.log("emitting changed_timePeriod");
+                DB.events.emit("changed_timePeriod", activeTimePeriod);
+            }, reject);
+        }, reject);
+    });
+}
+
+function cancelJob(projectId) {
+    return new Promise((resolve, reject) => {
+        console.log("Cancelling project", projectId);
+        DB.timePeriod((timePeriods) => {
+            console.log("Got time periods...");
+            timePeriods.where({
+                projectId: projectId,
+                endTime: null
+            }).remove();
+
+            timePeriods.commit().then(() => {
+                setSetting({activeProject: null, activeTimePeriod: null}).
+                    then(resolve, reject);
+                console.log("emitting changed_timePeriod");
+                DB.events.emit("changed_timePeriod", null);
+            }, reject);
+        }, reject);
+    });
+}
 
 NativeAppEventEmitter.addListener('DidEnterRegion', (region) => {
     console.log("Entered region", region);
-    console.log("PushNotificationIOS.presentLocalNotification", AWUtils.presentLocalNotification);
-    if (settings.activeProject != region.identifier) {
-        DB.get('project', region.identifier).then((project) => {
-            DB.saveOrUpdate('timePeriods', {
-                startTime: new Date().getTime(),
-                projectId: project._id
-            }).then((timePeriod) => {
+    var projectPromise = DB.get('project', region.identifier);
+
+    DB.settings((settings) => {
+        if (settings.activeProject != region.identifier) {
+            var stopStart;
+            if (settings.activeProject) {
+                console.log("Stopping active project", settings.activeProject);
+
+                stopStart = new Promise((resolve, reject) => {
+                    stopJob(settings.activeProject).then(() => {
+                        startJob(region.identifier).then((timePeriod) => {
+                            console.log("started timePeriod", timePeriod._id);
+                            resolve(timePeriod);
+                        }, reject);
+                    }, reject);
+                });
+            } else {
+                console.log("starting project for region", region.identifier)
+                stopStart = startJob(region.identifier);
+            }
+
+            Promise.all([stopStart, projectPromise]).then((values) => {
+                var [timePeriod, project] = values;
+                console.log("Presenting local notification", timePeriod, project);
                 AWUtils.presentLocalNotification({
                     alertBody: "Starting project " + project.name,
                     category: "new_job",
@@ -66,20 +182,24 @@ NativeAppEventEmitter.addListener('DidEnterRegion', (region) => {
                         "timePeriod": timePeriod._id
                     }
                 });
-                setSetting({activeProject: region.identifier, activeTimePeriod: timePeriod._id});
             });
-        });
-    }
+        } else {
+
+        }
+    });
 });
 
 NativeAppEventEmitter.addListener('DidExitRegion', (region) => {
     console.log("Left region", region);
-    if (settings.activeProject == region.identifier) {
-        AWUtils.presentLocalNotification({
-            alertBody: "Left region " + region.identifier
-        });
-        setSetting({activeProject: null, activeTimePeriod: null});
-    }
+    DB.settings((settings) => {
+        console.log("Loaded settings", settings);
+        if (settings.activeProject == region.identifier) {
+            AWUtils.presentLocalNotification({
+                alertBody: "Left region " + region.identifier
+            });
+            stopJob(region.identifier);
+        }
+    });
 });
 
 AWLocationManager.authorizationStatus((err, result) => {
@@ -103,47 +223,41 @@ var Project = t.struct({
 
 var DB = require('./db');
 
-DB.events.on('changed_project', (id) => {
-    console.log("Fetching changed project", id);
-    DB.get('project', id).then((project) => {
-        console.log("Updating region", project);
-        if (project.latitude && project.longitude) {
-            console.log("startMonitoringForRegion", AWLocationManager.startMonitoringForRegion);
-            AWLocationManager.startMonitoringForRegion({
-                longitude: project.longitude,
-                latitude: project.latitude,
-                radius: project.range + "",
-                identifier: project._id + ""
-            }, (err) => {
-                console.log("Monitoring added");
-            });
-        }
-    });
+DB.events.on('changed_project', (project) => {
+    console.log("Updating region", project);
+    if (project.latitude && project.longitude) {
+        console.log("startMonitoringForRegion", AWLocationManager.startMonitoringForRegion);
+        AWLocationManager.startMonitoringForRegion({
+            longitude: project.longitude,
+            latitude: project.latitude,
+            radius: project.range + "",
+            identifier: project._id + ""
+        }, (err) => {
+            console.log("Monitoring added");
+        });
+    }
 });
 
-// var Carousel = require('react-native-looped-carousel');
+DB.events.on('removed_project', (project) => {
+    console.log("Removing region", project);
+    AWLocationManager.stopMonitoringForRegion({
+        longitude: project.longitude,
+        latitude: project.latitude,
+        radius: project.range + "",
+        identifier: project._id + ""
+    }, (err) => {
+    });
+
+});
+
 var Dimensions = require('Dimensions');
 var {width, height} = Dimensions.get('window');
 height -= 20;
 
-var settings = {};
-
-DB.get('app', 1).then((_settings) => {
-    console.log("Loaded settings", _settings);
-    settings = _settings;
-}, (err) => {
-    DB.app((tbl) => {
-        settings = tbl.add(settings)[0];
-        console.log("created settings", settings);
-    });
-});
-
 function setSetting(newSettings) {
-    console.log("setting", newSettings);
-    for (var key in newSettings) {
-        settings[key] = newSettings[key];
-    }
-    return DB.saveOrUpdate('app', settings).then(() => {
+    newSettings._id = 1;
+    console.log("new settings: ", newSettings);
+    return DB.saveOrUpdate('app', newSettings).then(() => {
         console.log("Saved settings");
     }, (err) => {
         console.log("Failed to save settings");
@@ -164,8 +278,11 @@ var ProjectCard = React.createClass({
     toggleActive() {
         var projectId = this.props.project._id;
         console.log("project id", projectId, this.props.activeProject);
-        var newActiveProject = this.props.activeProject != projectId ? projectId : null;
-        setSetting({activeProject: newActiveProject});
+        if (this.props.activeProject == projectId) {
+            stopJob(this.props.activeProject);
+        } else {
+            startJob(projectId);
+        }
     },
 
     render() {
@@ -174,6 +291,7 @@ var ProjectCard = React.createClass({
             <Text style={{margin: 20}}>Project: {project.name} #{project._id}</Text>
             <Text>Active Project: {this.props.activeProject}</Text>
             <Button onPress={this.toggleActive}>{this.props.activeProject == project._id ? "Stop" : "Start"}</Button>
+            <Button onPress={this.props.onViewWorkLog} style={{marginTop: 30}}>View work log</Button>
             <Button onPress={this.props.onEditProject} style={{marginTop: 30}}>Edit</Button>
             <Button onPress={this.props.onRemove} style={{marginTop: 30}}>Delete</Button>
         </View>);
@@ -190,6 +308,7 @@ var ProjectList = React.createClass({
     componentDidMount() {
         this.refreshList();
         DB.events.on('changed_project', this.refreshList);
+        DB.events.on('removed_project', this.refreshList);
     },
 
     refreshList() {
@@ -202,10 +321,7 @@ var ProjectList = React.createClass({
     },
 
     handleRemove(project) {
-        DB.project((tbl) => {
-            tbl.removeById(project._id);
-            this.refreshList();
-        });
+        DB.remove('project', project);
     },
 
     render() {
@@ -213,6 +329,7 @@ var ProjectList = React.createClass({
         var projects = _.map(this.state.projects, (project) => {
             return (<View key={project._id} style={{width:width,height:height}}>
                 <ProjectCard
+                    onViewWorkLog={this.props.onViewWorkLog.bind(null, project)}
                     onRemove={this.handleRemove.bind(null, project)}
                     onEditProject={this.props.onEditProject.bind(null, project)}
                     activeProject={this.props.activeProject}
@@ -259,31 +376,89 @@ var ProjectEditor = React.createClass({
     }
 });
 
+var WorkLogViewer = React.createClass({
+    getInitialState() {
+        return {
+            dataSource: new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2})
+        };
+    },
+
+    componentDidMount() {
+        this.refreshList();
+        DB.events.on('changed_timePeriod', () => {
+            this.refreshList();
+        });
+    },
+
+    refreshList() {
+        console.log("Refreshing Work Log");
+        DB.timePeriod((timePeriods) => {
+            var rows = timePeriods.where({
+                projectId: this.props.project._id
+            }).find();
+            console.log("Got time periods", JSON.stringify(rows));
+            this.setState({
+                dataSource: this.state.dataSource.cloneWithRows(rows)
+            });
+        });
+    },
+
+    render() {
+        return (
+            <ListView
+                dataSource={this.state.dataSource}
+                renderRow={this._renderRow}
+            />
+        );
+    },
+
+    _renderRow(rowData) {
+        return (<View style={styles.workLogRow}>
+            <Text>From: {dateFormat(rowData.startTime, "isoDateTime")}</Text>
+            <Text>To: {rowData.endTime ? dateFormat(rowData.endTime, "isoDateTime") : "Running..."}</Text>
+        </View>);
+    }
+});
+
 var AtWork = React.createClass({
 
     getInitialState() {
         return {
             tracking: false,
-            activeProject: settings.activeProject
+            activeProject: null
         };
     },
 
-    componentDidMount() {
-        DB.events.on("changed_app", () => {
+    reloadSettings() {
+        DB.settings((settings) => {
+            console.log("Loaded fresh settings", settings);
             this.setState({activeProject: settings.activeProject});
-        });
+        })
+    },
+
+    componentDidMount() {
+        this.reloadSettings();
+        DB.events.on("changed_app", this.reloadSettings);
     },
 
     _onToggle() {
         this.setState({tracking: !this.state.tracking});
     },
 
-    _handleCreateNewProject() {
+    handleCreateNewProject() {
         console.log("Creating new project...");
-        this.refs.navigator.push({id:"projectEditor"});
+        this.setState({
+            editedProject: {
+                name: "mCASH",
+                latitude: "59.917963",
+                longitude: "10.749727"
+            }
+        }, () => {
+            this.refs.navigator.push({id:"projectEditor"});
+        })
     },
 
-    _handleEditProject(project) {
+    handleEditProject(project) {
         console.log("Editing project...");
         DB.get('project', project._id).then((_project) => {
             this.setState({
@@ -294,6 +469,10 @@ var AtWork = React.createClass({
         });
     },
 
+    handleViewWorkLog(project) {
+        this.refs.navigator.push({id:"viewWorkLog", project: project});
+    },
+
     _renderScene(route, navigator) {
         console.log("route", route);
         switch (route.id) {
@@ -301,8 +480,9 @@ var AtWork = React.createClass({
                 return <ProjectList
                     ref={(ref) => {this.projectList = ref;}}
                     activeProject={this.state.activeProject}
-                    onEditProject={this._handleEditProject}
-                    onCreateNewProject={this._handleCreateNewProject} />;
+                    onViewWorkLog={this.handleViewWorkLog}
+                    onEditProject={this.handleEditProject}
+                    onCreateNewProject={this.handleCreateNewProject} />;
             case 'projectEditor':
                 return <ProjectEditor
                     project={this.state.editedProject}
@@ -325,6 +505,9 @@ var AtWork = React.createClass({
                             navigator.pop()
                         })
                     }} />;
+            case 'viewWorkLog':
+                return <WorkLogViewer
+                    project={route.project} />;
         }
 
     },
@@ -422,6 +605,12 @@ var styles = StyleSheet.create({
         color: '#333333',
         marginBottom: 5,
     },
+
+    /** Work Log **/
+    workLogRow: {
+        padding: 10,
+        borderBottomWidth: 1
+    }
 });
 
 AppRegistry.registerComponent('AtWork', () => AtWork);

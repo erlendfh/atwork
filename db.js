@@ -11,6 +11,12 @@ var DB = {
     events: new Events()
 };
 
+DB.settings = function (resolve, reject) {
+    DB.get('app', 1).then(resolve, (err) => {
+        DB.saveOrUpdate('app', {}).then(resolve, reject);
+    }, reject);
+};
+
 DB.get = function (type, id) {
     return new Promise((resolve, reject) => {
         console.log("fetching", type, id);
@@ -20,41 +26,53 @@ DB.get = function (type, id) {
             if (objs.length > 0) {
                 resolve(tbl.get(id)[0]);
             } else {
-                reject();
+                reject && reject();
             }
         }, reject);
+    });
+};
+
+DB.remove = function (type, obj) {
+    return new Promise((resolve, reject) => {
+        DB[type]((tbl) => {
+            tbl.removeById(obj._id);
+            tbl.commit().then(() => {
+                DB.events.emit("removed_" + type, obj);
+            });
+        });
     });
 };
 
 DB.saveOrUpdate = function (type, data) {
     var isNew = data._id == null;
     return new Promise((resolve, reject) => {
-        RNS.table(type).then((tbl) => {
-
+        DB[type]((tbl) => {
             console.log("got table, saving");
-
             var result = false;
 
             if (isNew) {
-                result = tbl.add(_.extend({}, data));
+                result = _.extend({}, data);
+                tbl.add(result);
             } else {
-                result = tbl.updateById(data._id, _.omit(data, '_id'))[0];
+                var id = tbl.updateById(data._id, _.omit(data, '_id'))[0];
+                result = tbl.get(id);
             }
 
             console.log("result", result);
             if (result) {
                 tbl.commit().then((tbl) => {
-                    console.log("Committed", tbl);
+                    console.log("Committed", type, data);
                     resolve(result);
                 }, reject);
             } else {
-                reject();
+                reject && reject();
             }
         });
     }).then((result) => {
         if (isNew) {
             DB.events.emit("new_" + type, result);
         }
+        console.log("Fireing event", "changed_" + type);
         DB.events.emit("changed_" + type, result);
     });
 }
