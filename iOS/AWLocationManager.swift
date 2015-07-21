@@ -20,6 +20,7 @@ class AWLocationManager: NSObject, CLLocationManagerDelegate, RCTBridgeModule {
     bridge = nil
     super.init()
     manager.delegate = self
+    NSLog("Monitored regions: %@", manager.monitoredRegions)
   }
   
   @objc func test() {
@@ -36,9 +37,41 @@ class AWLocationManager: NSObject, CLLocationManagerDelegate, RCTBridgeModule {
     manager.requestAlwaysAuthorization()
   }
   
+  @objc func startMonitoringForRegion(region:Dictionary<String, NSString>, callback:RCTResponseSenderBlock) {
+    NSLog("Monitoring region %@", region);
+    manager.startMonitoringForRegion(CLCircularRegion(
+      center:CLLocationCoordinate2D(
+        latitude: region["latitude"]!.doubleValue,
+        longitude: region["longitude"]!.doubleValue),
+      radius: region["radius"]!.doubleValue, identifier: region["identifier"] as! String));
+    callback([NSNull()]);
+  }
+  
   func locationManager(manager: CLLocationManager!, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
     NSLog("Changed auth status")
     self.bridge?.eventDispatcher.sendAppEventWithName("ChangedLocationAuthorizationStatus", body:stringFromAuthStatus(status))
+  }
+
+  func dictionaryForCLRegion(region:CLCircularRegion!) -> Dictionary<String, String> {
+    return [
+      "latitude": region.center.latitude.description,
+      "longitude": region.center.longitude.description,
+      "radius": region.radius.description,
+      "identifier": region.identifier
+    ]
+  }
+  
+  func locationManager(manager: CLLocationManager!, didEnterRegion region: CLRegion!) {
+    if (region.isKindOfClass(CLCircularRegion)) {
+      self.bridge?.eventDispatcher.sendAppEventWithName("DidEnterRegion", body:self.dictionaryForCLRegion(region as! CLCircularRegion))
+    }
+  }
+  
+  func locationManager(manager: CLLocationManager!, didExitRegion region: CLRegion!) {
+    if (region.isKindOfClass(CLCircularRegion)) {
+      self.bridge?.eventDispatcher.sendAppEventWithName("DidExitRegion", body:self.dictionaryForCLRegion(region as! CLCircularRegion))
+    }
+    return
   }
   
   func stringFromAuthStatus(status:CLAuthorizationStatus) -> NSString {

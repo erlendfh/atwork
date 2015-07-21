@@ -25,6 +25,9 @@
 		832341BD1AAA6AB300B99B32 /* libRCTText.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 832341B51AAA6A8300B99B32 /* libRCTText.a */; };
 		A7806E951B56797200D7BFDB /* AWLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7806E941B56797200D7BFDB /* AWLocationManager.swift */; };
 		A7806E981B5679CD00D7BFDB /* AWLocationManagerBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A7806E971B5679CD00D7BFDB /* AWLocationManagerBridge.m */; };
+		A791BCE81B5C4A4F0021BEE0 /* libRCTPushNotification.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A791BCE21B5C4A180021BEE0 /* libRCTPushNotification.a */; };
+		A791BCEA1B5CD7C60021BEE0 /* AWUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A791BCE91B5CD7C60021BEE0 /* AWUtils.swift */; };
+		A791BCEC1B5CD7EC0021BEE0 /* AWUtilsBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A791BCEB1B5CD7EC0021BEE0 /* AWUtilsBridge.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,6 +108,13 @@
 			remoteGlobalIDString = 58B5119B1A9E6C1200147676;
 			remoteInfo = RCTText;
 		};
+		A791BCE11B5C4A180021BEE0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A791BCD81B5C4A180021BEE0 /* RCTPushNotification.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 134814201AA4EA6300B7C361;
+			remoteInfo = RCTPushNotification;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -133,6 +143,10 @@
 		A7806E961B56799E00D7BFDB /* AWLocationManager-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "AWLocationManager-Bridging-Header.h"; path = "iOS/AWLocationManager-Bridging-Header.h"; sourceTree = "<group>"; };
 		A7806E971B5679CD00D7BFDB /* AWLocationManagerBridge.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AWLocationManagerBridge.m; path = iOS/AWLocationManagerBridge.m; sourceTree = "<group>"; };
 		A7806E991B567A7900D7BFDB /* AtWork-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "AtWork-Bridging-Header.h"; path = "iOS/AtWork-Bridging-Header.h"; sourceTree = "<group>"; };
+		A791BCD81B5C4A180021BEE0 /* RCTPushNotification.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTPushNotification.xcodeproj; path = "node_modules/react-native/Libraries/PushNotificationIOS/RCTPushNotification.xcodeproj"; sourceTree = "<group>"; };
+		A791BCE91B5CD7C60021BEE0 /* AWUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AWUtils.swift; path = iOS/AWUtils.swift; sourceTree = "<group>"; };
+		A791BCEB1B5CD7EC0021BEE0 /* AWUtilsBridge.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AWUtilsBridge.m; path = iOS/AWUtilsBridge.m; sourceTree = "<group>"; };
+		A791BCED1B5CD8600021BEE0 /* AWUtils-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "AWUtils-Bridging-Header.h"; path = "iOS/AWUtils-Bridging-Header.h"; sourceTree = "<group>"; };
 		A7E149FB1B54EDDF00CFF9DC /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -154,6 +168,7 @@
 				00C302E81ABCBA2D00DB3ED1 /* libRCTImage.a in Frameworks */,
 				133E29F31AD74F7200F7D852 /* libRCTLinking.a in Frameworks */,
 				00C302E91ABCBA2D00DB3ED1 /* libRCTNetwork.a in Frameworks */,
+				A791BCE81B5C4A4F0021BEE0 /* libRCTPushNotification.a in Frameworks */,
 				139105C61AF99C1200B5F7CC /* libRCTSettings.a in Frameworks */,
 				832341BD1AAA6AB300B99B32 /* libRCTText.a in Frameworks */,
 				00C302EA1ABCBA2D00DB3ED1 /* libRCTVibration.a in Frameworks */,
@@ -251,6 +266,9 @@
 				A7806E961B56799E00D7BFDB /* AWLocationManager-Bridging-Header.h */,
 				A7806E971B5679CD00D7BFDB /* AWLocationManagerBridge.m */,
 				A7806E991B567A7900D7BFDB /* AtWork-Bridging-Header.h */,
+				A791BCE91B5CD7C60021BEE0 /* AWUtils.swift */,
+				A791BCEB1B5CD7EC0021BEE0 /* AWUtilsBridge.m */,
+				A791BCED1B5CD8600021BEE0 /* AWUtils-Bridging-Header.h */,
 			);
 			name = AtWork;
 			sourceTree = "<group>";
@@ -281,6 +299,7 @@
 				00C302BB1ABCB91800DB3ED1 /* RCTImage.xcodeproj */,
 				78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */,
 				00C302D31ABCB9D200DB3ED1 /* RCTNetwork.xcodeproj */,
+				A791BCD81B5C4A180021BEE0 /* RCTPushNotification.xcodeproj */,
 				139105B61AF99BAD00B5F7CC /* RCTSettings.xcodeproj */,
 				832341B01AAA6A8300B99B32 /* RCTText.xcodeproj */,
 				00C302DF1ABCB9EE00DB3ED1 /* RCTVibration.xcodeproj */,
@@ -314,6 +333,14 @@
 			children = (
 				13B07F961A680F5B00A75B9A /* AtWork.app */,
 				00E356EE1AD99517003FC87E /* AtWorkTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A791BCD91B5C4A180021BEE0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A791BCE21B5C4A180021BEE0 /* libRCTPushNotification.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -409,6 +436,10 @@
 				{
 					ProductGroup = 00C302D41ABCB9D200DB3ED1 /* Products */;
 					ProjectRef = 00C302D31ABCB9D200DB3ED1 /* RCTNetwork.xcodeproj */;
+				},
+				{
+					ProductGroup = A791BCD91B5C4A180021BEE0 /* Products */;
+					ProjectRef = A791BCD81B5C4A180021BEE0 /* RCTPushNotification.xcodeproj */;
 				},
 				{
 					ProductGroup = 139105B71AF99BAD00B5F7CC /* Products */;
@@ -510,6 +541,13 @@
 			remoteRef = 832341B41AAA6A8300B99B32 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
+		A791BCE21B5C4A180021BEE0 /* libRCTPushNotification.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libRCTPushNotification.a;
+			remoteRef = A791BCE11B5C4A180021BEE0 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
 /* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
@@ -545,7 +583,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A791BCEA1B5CD7C60021BEE0 /* AWUtils.swift in Sources */,
 				13B07FBC1A68108700A75B9A /* AppDelegate.m in Sources */,
+				A791BCEC1B5CD7EC0021BEE0 /* AWUtilsBridge.m in Sources */,
 				A7806E981B5679CD00D7BFDB /* AWLocationManagerBridge.m in Sources */,
 				A7806E951B56797200D7BFDB /* AWLocationManager.swift in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
@@ -623,6 +663,7 @@
 					"$(SRCROOT)/node_modules/react-native/React/**",
 				);
 				INFOPLIST_FILE = iOS/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = AtWork;
@@ -642,6 +683,7 @@
 					"$(SRCROOT)/node_modules/react-native/React/**",
 				);
 				INFOPLIST_FILE = iOS/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = AtWork;

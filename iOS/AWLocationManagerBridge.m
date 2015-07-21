@@ -13,5 +13,6 @@
 RCT_EXTERN_METHOD(test)
 RCT_EXTERN_METHOD(authorizationStatus:(RCTResponseSenderBlock)callback)
 RCT_EXTERN_METHOD(requestAlwaysAuthorization)
+RCT_EXTERN_METHOD(startMonitoringForRegion:(NSDictionary*)region callback:(RCTResponseSenderBlock)callback);
 
 @end
