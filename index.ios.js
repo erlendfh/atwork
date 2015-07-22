@@ -27,8 +27,128 @@ var {
     StyleSheet,
     Text,
     TouchableHighlight,
+    TouchableOpacity,
     View,
 } = React;
+
+var navBarHeight = 40;
+
+var styles = StyleSheet.create({
+    scrollView: {
+        backgroundColor: '#6A85B1',
+        height: 300,
+    },
+    horizontalScrollView: {
+        height: 120,
+    },
+    containerPage: {
+        height: 50,
+        width: 50,
+        backgroundColor: '#527FE4',
+        padding: 5,
+    },
+
+    navBar: {
+      backgroundColor: 'white',
+    },
+    navBarText: {
+      fontSize: 16,
+      marginVertical: 10,
+    },
+    navBarTitleText: {
+      color: "black",
+      fontWeight: '500',
+      marginVertical: 9,
+    },
+    navBarLeftButton: {
+      paddingLeft: 10,
+    },
+    navBarRightButton: {
+      paddingRight: 10,
+    },
+    navBarButtonText: {
+      color: "black",
+    },
+    navPages: {
+        paddingTop: navBarHeight
+    },
+
+    title: {
+        fontSize: 30,
+        flex: 1,
+        textAlign: "center",
+        flexDirection: "column"
+    },
+
+    text: {
+        fontSize: 20,
+        color: '#888888',
+        left: 80,
+        top: 20,
+        height: 40,
+    },
+
+    actions: {
+        flex: 2,
+        flexDirection: 'row'
+    },
+
+    action: {
+        flex: 1
+    },
+
+    button: {
+        margin: 7,
+        padding: 5,
+        alignItems: 'center',
+        backgroundColor: '#eaeaea',
+        borderRadius: 3,
+    },
+    buttonContents: {
+        flexDirection: 'row',
+        width: 64,
+        height: 64,
+    },
+    img: {
+        width: 64,
+        height: 64,
+    },
+
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    toggleButton: {
+        padding: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        overflow: "hidden",
+        backgroundColor: "#cccccc"
+    },
+
+    toggleButtonText: {
+        fontSize: 20
+    },
+
+    welcome: {
+        fontSize: 20,
+        textAlign: 'center',
+        margin: 10,
+    },
+    instructions: {
+        textAlign: 'center',
+        color: '#333333',
+        marginBottom: 5,
+    },
+
+    /** Work Log **/
+    workLogRow: {
+        padding: 10,
+        borderBottomWidth: 1
+    }
+});
 
 PushNotificationIOS.requestPermissions();
 
@@ -252,7 +372,6 @@ DB.events.on('removed_project', (project) => {
 
 var Dimensions = require('Dimensions');
 var {width, height} = Dimensions.get('window');
-height -= 20;
 
 function setSetting(newSettings) {
     newSettings._id = 1;
@@ -266,11 +385,9 @@ function setSetting(newSettings) {
 
 var NewProjectCard = React.createClass({
     render() {
-        return (
-            <View style={styles.container}>
+        return (<View style={styles.container}>
                 <Button onPress={this.props.onCreateNew}>+ Create New</Button>
-            </View>
-        );
+            </View>);
     }
 });
 
@@ -327,6 +444,7 @@ var ProjectList = React.createClass({
     render() {
         console.log("render project list", this.state.projects);
         var projects = _.map(this.state.projects, (project) => {
+            console.log("height", height, "-", styles.navPages)
             return (<View key={project._id} style={{width:width,height:height}}>
                 <ProjectCard
                     onViewWorkLog={this.props.onViewWorkLog.bind(null, project)}
@@ -420,6 +538,39 @@ var WorkLogViewer = React.createClass({
     }
 });
 
+var NavigationBarRouteMapper = {
+
+  LeftButton: function(route, navigator, index, navState) {
+    if (index === 0) {
+      return null;
+    }
+
+    var previousRoute = navState.routeStack[index - 1];
+    return (
+      <TouchableOpacity
+        onPress={() => navigator.pop()}>
+        <View style={styles.navBarLeftButton}>
+          <Text style={[styles.navBarText, styles.navBarButtonText]}>
+            {previousRoute.title}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  },
+
+  RightButton: function(route, navigator, index, navState) {
+    return null;
+  },
+
+  Title: function(route, navigator, index, navState) {
+    return (
+      <Text style={[styles.navBarText, styles.navBarTitleText]}>
+        {route.name}
+      </Text>
+    );
+  },
+};
+
 var AtWork = React.createClass({
 
     getInitialState() {
@@ -454,7 +605,7 @@ var AtWork = React.createClass({
                 longitude: "10.749727"
             }
         }, () => {
-            this.refs.navigator.push({id:"projectEditor"});
+            this.refs.navigator.push({id:"projectEditor", name: "New Project"});
         })
     },
 
@@ -464,13 +615,13 @@ var AtWork = React.createClass({
             this.setState({
                 editedProject: _project
             }, () => {
-                this.refs.navigator.push({id:"projectEditor"});
+                this.refs.navigator.push({id:"projectEditor", name: "Edit " + _project.name});
             });
         });
     },
 
     handleViewWorkLog(project) {
-        this.refs.navigator.push({id:"viewWorkLog", project: project});
+        this.refs.navigator.push({id:"viewWorkLog", project: project, name: "Project " + project.name});
     },
 
     _renderScene(route, navigator) {
@@ -515,101 +666,13 @@ var AtWork = React.createClass({
     render: function() {
         return (<Navigator
             ref="navigator"
-            initialRoute={{id:'projectList'}}
+            navigationBar={<Navigator.NavigationBar
+                routeMapper={NavigationBarRouteMapper}
+                style={styles.navBar} />}
+            initialRoute={{id:'projectList', name: "@Work"}}
             renderScene={this._renderScene}
+            sceneStyle={styles.navPages}
         />);
-    }
-});
-
-var styles = StyleSheet.create({
-    scrollView: {
-        backgroundColor: '#6A85B1',
-        height: 300,
-    },
-    horizontalScrollView: {
-        height: 120,
-    },
-    containerPage: {
-        height: 50,
-        width: 50,
-        backgroundColor: '#527FE4',
-        padding: 5,
-    },
-
-    title: {
-        fontSize: 30,
-        flex: 1,
-        textAlign: "center",
-        flexDirection: "column"
-    },
-
-    text: {
-        fontSize: 20,
-        color: '#888888',
-        left: 80,
-        top: 20,
-        height: 40,
-    },
-
-    actions: {
-        flex: 2,
-        flexDirection: 'row'
-    },
-
-    action: {
-        flex: 1
-    },
-
-    button: {
-        margin: 7,
-        padding: 5,
-        alignItems: 'center',
-        backgroundColor: '#eaeaea',
-        borderRadius: 3,
-    },
-    buttonContents: {
-        flexDirection: 'row',
-        width: 64,
-        height: 64,
-    },
-    img: {
-        width: 64,
-        height: 64,
-    },
-
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-
-    toggleButton: {
-        padding: 10,
-        borderRadius: 10,
-        borderWidth: 1,
-        overflow: "hidden",
-        backgroundColor: "#cccccc"
-    },
-
-    toggleButtonText: {
-        fontSize: 20
-    },
-
-    welcome: {
-        fontSize: 20,
-        textAlign: 'center',
-        margin: 10,
-    },
-    instructions: {
-        textAlign: 'center',
-        color: '#333333',
-        marginBottom: 5,
-    },
-
-    /** Work Log **/
-    workLogRow: {
-        padding: 10,
-        borderBottomWidth: 1
     }
 });
 
